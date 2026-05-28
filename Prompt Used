@@ -1,0 +1,66 @@
+# LayoverNow V2 Completion
+
+## Context
+LayoverNow is a Chrome extension (Manifest V3, vanilla JavaScript) that helps travelers find flight routes with worthwhile stopover cities. The codebase is already in this workspace. V1 is complete and working offline: airport autocomplete (airports.js), Haversine detour and stopover scoring (search.js), flight radar visualization on a canvas, and multi-city booking link generation for Skyscanner and Google Flights.
+
+The product is positioned around legitimate airline stopover programs (Icelandair, TAP, Copa, Emirates). We do not implement hidden-city or skiplagging routes. Monetization is affiliate-only via Skyscanner.
+
+## Goal
+Bring V2 to a complete, system-tested state. V2 adds an AI advisory layer and live trip context on top of V1's deterministic core. V1 functionality must remain intact and reachable as a fallback when V2 services fail.
+
+## Tasks (in order)
+
+1. Tag V1. Ensure all V1 code is committed on main. Create an annotated git tag v1.0 describing the V1 feature set. Verify the working tree is clean.
+
+2. Create a v2 feature branch. All V2 work goes here. Do not merge to main until the acceptance criteria below are met.
+
+3. Wire the AeroAI Advisor.
+   - Add lib/advisor.js exposing evaluateLayover(city, iata, layoverHours, season, interests) returning { feasibility: 'recommended' | 'tight' | 'not_worth_it', reasoning, suggested_activity }.
+   - Call an external LLM API. Read the user API key from chrome.storage.local under aiApiKey. If missing, throw a typed ApiKeyMissingError.
+   - Add a 24-hour LRU response cache keyed on iata|hours|season|interestsHash.
+   - One retry on timeout or 5xx, then surface a typed AdvisorUnavailableError.
+
+4. Wire the trip context panel (visa, transit currency, weather).
+   - lib/context.js exposes getTripContext(originCountry, destinationCountry, layoverCity, layoverDate).
+   - Visa: static bundled JSON of passport-to-country requirements. No external API in V2.
+   - Currency: bundled IATA-to-currency map.
+   - Weather: external weather API for the layover city on the layover date. Cache 6 hours. On failure, return null for weather and continue.
+
+5. Add three ranking modes: Best Value, Savings, Min Detour.
+   - Implement in lib/ranking.js as pure functions taking the candidate list and returning a sorted copy.
+   - Best Value blends savings, detour overhead, and (when available) advisor feasibility.
+   - When the advisor is unavailable, Best Value must fall back to a deterministic weighted score. This fallback path must be explicit and tested.
+
+6. Affiliate integration.
+   - config/affiliates.js holds a Skyscanner partner ID. Read it from chrome.storage.local if set; otherwise use a placeholder. Append the partner parameter to every Skyscanner booking link.
+   - Add a visible disclosure under the results: "We may earn a commission on bookings made through these links."
+
+7. Privacy policy and store assets.
+   - docs/PRIVACY.md: what data leaves the extension (only the layover query parameters sent to the AI and weather APIs), what is stored locally (API key, caches), what is not collected (no user identity, no analytics).
+   - docs/STORE_LISTING.md: short and long descriptions for the Chrome Web Store.
+
+8. Documentation for grading.
+   - docs/TEST_PLAN.md: V1 system tests (deterministic) and V2 system tests (API failure paths, fallback behavior, cache hits, retry behavior). Include manual steps and expected results.
+   - docs/RISK_REGISTER.md: scope creep, Manifest V3 API changes (V1 risk), third-party AI and data API rate limits, cost, and outages (V2-specific risk). For each: likelihood, impact, mitigation.
+   - docs/CHANGE_CONTROL.md: branching model, commit conventions, version tagging.
+
+9. Commit hygiene.
+   - One commit per logical task above. Do not squash. Conventional prefixes (feat, fix, docs, test).
+   - When V2 acceptance criteria pass, merge to main with a merge commit and tag v2.0.
+
+## Constraints
+- Vanilla JavaScript only. No build step, no framework, no TypeScript.
+- Every V2 feature must degrade gracefully to V1 behavior when its network dependency fails.
+- Do not implement hidden-city or skiplagging logic anywhere in the codebase.
+- Only MIT or Apache 2.0 dependencies. No GPL.
+- No airline trademarks or logos in the UI beyond plain text names.
+
+## Acceptance Criteria
+- git log --oneline on v2 shows a clean, ordered set of commits matching the tasks.
+- git tag lists both v1.0 and v2.0.
+- Loading the unpacked extension in Chrome and searching BOS to CDG with a 3-day stopover shows V1 results, with the AeroAI Advisor panel populated and the trip context panel showing visa, currency, and (optional) weather.
+- With Chrome DevTools set to offline, the same search returns V1 results without errors. The Advisor panel shows "AI advisor unavailable, showing deterministic ranking."
+- All four documentation files exist in docs/ and are complete.
+
+## Style
+Code comments and documentation should read like a developer wrote them. Avoid "leverages," "robust," "comprehensive," "seamlessly," and em-dashes. Plain explanatory comments only, and only where the code is not self-explanatory.
