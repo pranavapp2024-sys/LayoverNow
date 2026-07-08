@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layover Now - Flight Stopover Finder</title>
+  
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- HEADER BAR -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24">
+            <path fill="currentColor" d="M21,16V14L13,9V3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5V9L2,14V16L10,13.5V19L8,20.5V22L11.5,21L15,22V20.5L13,19V13.5L21,16Z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Layover<span>Now</span></h1>
+          <p>Layover Discovery Hub</p>
+        </div>
+      </div>
+      <div class="header-tag">
+        <span class="pulse-dot"></span>
+        <span class="tag-text">Live Flight Heuristics</span>
+      </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <main class="app-body">
+      
+      <!-- LEFT SIDEBAR: SEARCH CONTROLS -->
+      <section class="search-sidebar">
+        <div class="glass-card panel-search">
+          <h2 class="section-title">Configure Trip</h2>
+          
+          <div class="input-group">
+            <label for="origin-input">Origin</label>
+            <div class="input-wrapper">
+              <svg viewBox="0 0 24 24" width="16" height="16" class="input-icon"><path fill="currentColor" d="M2.05,11.5H1v1h1.05C2.5,16.63 5.87,20 10,20.45V21.5H11V20.45C15.13,20 18.5,16.63 18.95,12.5H20V11.5H18.95C18.5,7.37 15.13,4 11,3.55V2.5H10V3.55C5.87,4 2.5,7.37 2.05,11.5M10,5C13.86,5 17,8.14 17,12C17,15.86 13.86,19 10,19C6.14,19 3,15.86 3,12C3,8.14 6.14,5 10,5M10,7.5A4.5,4.5 0 0,0 5.5,12A4.5,4.5 0 0,0 10,16.5A4.5,4.5 0 0,0 14.5,12A4.5,4.5 0 0,0 10,7.5M10,9.5A2.5,2.5 0 0,1 12.5,12A2.5,2.5 0 0,1 10,14.5A2.5,2.5 0 0,1 7.5,12A2.5,2.5 0 0,1 10,9.5Z"/></svg>
+              <input type="text" id="origin-input" placeholder="e.g. Boston or BOS" autocomplete="off">
+            </div>
+            <!-- Autocomplete list -->
+            <div id="origin-list" class="autocomplete-list hidden"></div>
+          </div>
+          
+          <div class="input-group">
+            <label for="dest-input">Destination</label>
+            <div class="input-wrapper">
+              <svg viewBox="0 0 24 24" width="16" height="16" class="input-icon"><path fill="currentColor" d="M12,2C15.31,2 18,4.66 18,7.95C18,12.41 12,19 12,19C12,19 6,12.41 6,7.95C6,4.66 8.69,2 12,2M12,6A2,2 0 0,0 10,8A2,2 0 0,0 12,10A2,2 0 0,0 14,8A2,2 0 0,0 12,6Z"/></svg>
+              <input type="text" id="dest-input" placeholder="e.g. Paris or CDG" autocomplete="off">
+            </div>
+            <!-- Autocomplete list -->
+            <div id="dest-list" class="autocomplete-list hidden"></div>
+          </div>
+          
+          <div class="input-group-row">
+            <div class="input-group flex-1">
+              <label for="date-input">Departure Date</label>
+              <input type="date" id="date-input">
+            </div>
+            
+            <div class="input-group flex-1">
+              <label for="days-input">Stopover Length</label>
+              <div class="slider-display">
+                <span id="days-val">3</span> Days
+              </div>
+              <input type="range" id="days-input" min="1" max="14" value="3" class="range-slider">
+            </div>
+          </div>
+          
+          <button id="search-btn" class="glow-button">
+            <span>Find Layover Matches</span>
+            <div class="btn-glow"></div>
+          </button>
+        </div>
+        
+        <!-- SIDEBAR METRIC SUMMARY -->
+        <div class="glass-card summary-card hidden" id="route-summary">
+          <div class="summary-route">
+            <span id="summary-orig">BOS</span>
+            <span class="route-line"></span>
+            <span id="summary-dest">CDG</span>
+          </div>
+          <div class="summary-details">
+            <div class="metric">
+              <span class="metric-label">Direct Distance</span>
+              <span class="metric-value" id="summary-distance">5,520 km</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Direct Flight Time</span>
+              <span class="metric-value" id="summary-time">6.9h</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- RIGHT PANEL: GRAPHICS & RESULTS -->
+      <section class="results-panel">
+        
+        <!-- VISUAL WORLD RADAR MAP -->
+        <div class="glass-card map-card">
+          <div class="map-header">
+            <h3>Interactive Flight Radar</h3>
+            <span id="map-status" class="map-subtitle">Enter route to plot paths</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="radar-map"></canvas>
+            <div class="map-overlay-grid"></div>
+            <!-- Decorative radar scanning sweep -->
+            <div class="radar-sweep"></div>
+          </div>
+        </div>
+        
+        <!-- FLIGHT LAYOVER LIST -->
+        <div class="results-list-container">
+          <div class="results-header">
+            <div class="results-tabs">
+              <button class="tab-btn active" id="tab-results">✈ Flight Deals</button>
+              <button class="tab-btn" id="tab-advisor">🧠 AeroAI Advisor</button>
+            </div>
+            <div class="filter-controls" id="filter-controls">
+              <button class="filter-btn active" id="sort-score">Best Value</button>
+              <button class="filter-btn" id="sort-price">Savings</button>
+              <button class="filter-btn" id="sort-detour">Min Detour</button>
+            </div>
+          </div>
+          
+          <!-- Loading state -->
+          <div id="loading" class="results-placeholder hidden">
+            <div class="spinner"></div>
+            <p>Scanning global routes for stopover deals...</p>
+          </div>
+          
+          <!-- Empty State -->
+          <div id="empty-state" class="results-placeholder">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+              <path fill="currentColor" d="M12,2C15.31,2 18,4.66 18,7.95C18,12.41 12,19 12,19C12,19 6,12.41 6,7.95C6,4.66 8.69,2 12,2M12,6A2,2 0 0,0 10,8A2,2 0 0,0 12,10A2,2 0 0,0 14,8A2,2 0 0,0 12,6M12,22A5,5 0 0,1 7,17H9A3,3 0 0,0 12,20A3,3 0 0,0 15,17H17A5,5 0 0,1 12,22Z"/>
+            </svg>
+            <p>Enter your origin and destination, then hit search to discover stopover savings!</p>
+            <span class="subtext">Try Boston (BOS) to Paris (CDG) for an incredible Icelandair or Lisbon layover.</span>
+          </div>
+          
+          <!-- Results Container -->
+          <div id="results-list" class="results-list"></div>
+
+          <!-- AeroAI Advisor Panel -->
+          <div id="advisor-panel" class="advisor-panel hidden">
+            <!-- Dynamic AI Dossier Card -->
+            <div class="dossier-card">
+              <div class="dossier-grid">
+                <div class="dossier-item">
+                  <span class="dossier-label">Visa Status</span>
+                  <span class="dossier-val badge" id="adv-visa-badge">Checking...</span>
+                </div>
+                <div class="dossier-item">
+                  <span class="dossier-label">Transit Currency</span>
+                  <span class="dossier-val" id="adv-currency">AED (Dirham)</span>
+                </div>
+                <div class="dossier-item">
+                  <span class="dossier-label">Weather Forecast</span>
+                  <span class="dossier-val" id="adv-weather">Mild & Sunny</span>
+                </div>
+              </div>
+              <p class="dossier-desc" id="adv-visa-desc">Detailed visa analysis here...</p>
+              
+              <div class="dossier-item" style="margin-top: 10px;">
+                <span class="dossier-label">Transport Guidelines</span>
+                <span class="dossier-desc" id="adv-transport" style="font-size: 10px;">Transport suggestions...</span>
+              </div>
+              
+              <div class="dossier-hack-box">
+                <strong>💡 Pro Stopover Hack:</strong> <span id="adv-hacks">TAP programs include...</span>
+              </div>
+            </div>
+
+            <!-- Dynamic Itinerary Timeline -->
+            <div class="itinerary-box">
+              <h4>🧠 Custom Day-by-Day Layover Plan</h4>
+              <div class="itinerary-timeline" id="adv-itinerary-list">
+                <!-- Day-by-day itineraries rendered here -->
+              </div>
+            </div>
+
+            <!-- Conversational Chat Terminal -->
+            <div class="chat-terminal">
+              <div class="chat-header">
+                <span class="pulse-dot"></span>
+                <span>AeroAI Stopover Assistant</span>
+              </div>
+              <div class="chat-viewport" id="chat-viewport">
+                <div class="chat-msg chat-msg-ai">
+                  Hello! I am your AeroAI Advisor. Select a layover city and ask me anything about local 'transport', 'currency', or 'hotels'!
+                </div>
+              </div>
+              <div class="chat-input-row">
+                <input type="text" id="chat-input" placeholder="Ask AeroAI about this stopover (e.g. 'local currency' or 'transport')...">
+                <button id="chat-send-btn">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- LOAD APPLICATION MODULES -->
+  <script src="airports.js"></script>
+  <script src="search.js"></script>
+  <script src="advisor.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
