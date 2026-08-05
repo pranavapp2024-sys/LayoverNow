@@ -111,21 +111,94 @@ document.addEventListener("DOMContentLoaded", () => {
     advTransport.textContent = dossier.transport;
     advHacks.textContent = dossier.hacks;
     
-    // Render dynamic day-by-day suggested itineraries
-    const itinerary = window.generateItinerary(hub.iata, days);
-    advItineraryList.innerHTML = "";
+    // Update DOM for V1 System Verdict
+    const v1VerdictEl = document.getElementById("v1-verdict");
+    const aiVerdictEl = document.getElementById("ai-verdict");
+    const layoverHours = days * 24;
     
-    itinerary.forEach(day => {
-      const dayEl = document.createElement("div");
-      dayEl.className = "itinerary-day";
-      dayEl.innerHTML = `
-        <div class="itinerary-day-title">${day.title}</div>
-        <div class="itinerary-day-list">
-          ${day.activities.map(act => `<div class="itinerary-sight">${act}</div>`).join("")}
-        </div>
-      `;
-      advItineraryList.appendChild(dayEl);
+    let v1Feasibility = "recommended";
+    if (layoverHours < 6) v1Feasibility = "not_worth_it";
+    else if (layoverHours < 12) v1Feasibility = "tight";
+    
+    if (v1VerdictEl) v1VerdictEl.textContent = v1Feasibility.toUpperCase();
+    if (aiVerdictEl) aiVerdictEl.textContent = "Loading...";
+
+    advItineraryList.innerHTML = "<div style='padding: 10px; color: var(--text-muted);'>Analyzing layover facts with AeroAI...</div>";
+
+    const hardFacts = {
+      layoverHours: layoverHours,
+      originIata: activeOption.origin.iata,
+      hubIata: hub.iata,
+      destIata: activeOption.destination.iata,
+      city: hub.city,
+      season: dossier.weather.toLowerCase().includes("winter") || dossier.weather.toLowerCase().includes("cold") ? "winter" : "summer",
+      visaCategory: dossier.visaStatus,
+      currency: dossier.currency
+    };
+
+    window.fetchAIAdvice(hardFacts).then(rawResponse => {
+      const validated = window.validateAdvice(rawResponse, hardFacts.layoverHours, v1Feasibility);
+      
+      if (!validated) {
+        // Fall back to V1 entirely on validation failure
+        if (aiVerdictEl) aiVerdictEl.textContent = "FAILED - USING SYSTEM";
+        renderDeterministicItinerary();
+        return;
+      }
+
+      if (aiVerdictEl) {
+        aiVerdictEl.textContent = validated.feasibility.toUpperCase();
+        if (validated.disagreement) {
+          aiVerdictEl.textContent += " (DOWNGRADED)";
+          aiVerdictEl.style.color = "var(--accent-orange, orange)";
+        } else {
+          aiVerdictEl.style.color = "var(--text-primary)";
+        }
+      }
+
+      if (validated.confidence === "low" || validated.suggestions.length === 0) {
+        advItineraryList.innerHTML = `<div style='padding: 10px; color: var(--text-muted); font-style: italic;'>
+          AI did not have enough confidence to add suggestions. Showing system default.
+        </div>`;
+        renderDeterministicItinerary(true);
+      } else {
+        advItineraryList.innerHTML = `<div style="margin-bottom: 8px; font-size: 12px; color: var(--text-primary);">
+          <strong>AI Reasoning:</strong> ${validated.reasoning}
+        </div>`;
+        validated.suggestions.forEach(sug => {
+          const item = document.createElement("div");
+          item.className = "itinerary-day";
+          item.innerHTML = `
+            <div class="itinerary-day-title">${sug.activity}</div>
+            <div class="itinerary-day-list">
+              <div class="itinerary-sight">Est. Duration: ${sug.est_duration_hours} hrs</div>
+            </div>
+          `;
+          advItineraryList.appendChild(item);
+        });
+      }
+    }).catch(err => {
+      console.error("AI fetch failed, falling back", err);
+      if (aiVerdictEl) aiVerdictEl.textContent = "ERROR - USING SYSTEM";
+      renderDeterministicItinerary();
     });
+
+    function renderDeterministicItinerary(append = false) {
+      const itinerary = window.generateItinerary(hub.iata, days);
+      if (!append) advItineraryList.innerHTML = "";
+      
+      itinerary.forEach(day => {
+        const dayEl = document.createElement("div");
+        dayEl.className = "itinerary-day";
+        dayEl.innerHTML = `
+          <div class="itinerary-day-title">${day.title}</div>
+          <div class="itinerary-day-list">
+            ${day.activities.map(act => `<div class="itinerary-sight">${act}</div>`).join("")}
+          </div>
+        `;
+        advItineraryList.appendChild(dayEl);
+      });
+    }
     
     // Refresh Chat Terminal viewport welcome card
     chatViewport.innerHTML = `

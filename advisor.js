@@ -340,13 +340,85 @@ function getAdvisorResponse(hubIata, userQuery) {
   return `AeroAI Advisor: For stopovers in ${hub}, I recommend checking local visa guidelines, carrying a credit card with no foreign transaction fees, and utilizing the high-speed airport transit trains for easy city access. Let me know if you want to know about 'currency', 'transport', or 'hotels' for this route!`;
 }
 
+/**
+ * Constructs the prompt for the LLM based on deterministic hard facts.
+ */
+function buildAdvisorPrompt(hardFacts) {
+  return `You are the AeroAI Stopover Advisor. You must generate an itinerary based ONLY on the following hard facts:
+Layover Hub: ${hardFacts.city} (${hardFacts.hubIata})
+Layover Window: ${hardFacts.layoverHours} hours
+Season: ${hardFacts.season}
+Visa Category: ${hardFacts.visaCategory}
+Currency: ${hardFacts.currency}
+
+Constraints:
+1. Suggest activities that plausibly fit within the layover window (${hardFacts.layoverHours} hours).
+2. Do not invent specific place names, opening hours, prices, transit lines, or visa rules.
+3. If you are unsure, set confidence to "low" and return an empty suggestions array instead of guessing.
+
+You must return a machine-checkable strict JSON object with this exact structure:
+{
+  "feasibility": "recommended" | "tight" | "not_worth_it",
+  "reasoning": "Brief explanation",
+  "suggestions": [
+    { "activity": "string", "est_duration_hours": number }
+  ],
+  "confidence": "high" | "medium" | "low"
+}`;
+}
+
+/**
+ * Simulates fetching AI advice using the generated prompt.
+ * In a real environment, this would call an LLM API.
+ * For this client-side mockup, we simulate a response based on the prompt.
+ */
+async function fetchAIAdvice(hardFacts) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Simulate a valid response for long layovers
+      if (hardFacts.layoverHours >= 12) {
+        resolve(JSON.stringify({
+          feasibility: "recommended",
+          reasoning: "You have ample time to leave the airport and explore the highlights.",
+          suggestions: [
+            { activity: "Visit the city center", est_duration_hours: 4 },
+            { activity: "Enjoy a local meal", est_duration_hours: 2 }
+          ],
+          confidence: "high"
+        }));
+      } 
+      // Simulate a low-confidence/empty response for very short ones
+      else if (hardFacts.layoverHours < 6) {
+        resolve(JSON.stringify({
+          feasibility: "not_worth_it",
+          reasoning: "Not enough time to confidently recommend leaving the airport.",
+          suggestions: [],
+          confidence: "low"
+        }));
+      }
+      else {
+        resolve(JSON.stringify({
+          feasibility: "tight",
+          reasoning: "Enough time for a quick visit if you hurry.",
+          suggestions: [
+            { activity: "Quick walk near the transit hub", est_duration_hours: 3 }
+          ],
+          confidence: "medium"
+        }));
+      }
+    }, 800);
+  });
+}
+
 // Bind to window for Chrome Extension sequentially-loaded script environment
 if (typeof window !== "undefined") {
   window.generateItinerary = generateItinerary;
   window.getAdvisorDossier = getAdvisorDossier;
   window.getAdvisorResponse = getAdvisorResponse;
+  window.buildAdvisorPrompt = buildAdvisorPrompt;
+  window.fetchAIAdvice = fetchAIAdvice;
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { generateItinerary, getAdvisorDossier, getAdvisorResponse };
+  module.exports = { generateItinerary, getAdvisorDossier, getAdvisorResponse, buildAdvisorPrompt, fetchAIAdvice };
 }
