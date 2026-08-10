@@ -1,0 +1,71 @@
+# ============================================
+# LayoverNow - Git Ignore File
+# ============================================
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node.js / npm (if using proxy server)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+release/
+*.zip
+*.crx
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# API keys and credentials (NEVER commit these!)
+api-keys.json
+secrets.json
+credentials.json
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Chrome Extension specific
+# (Keep these in repo, but ignore packed versions)
+*.crx
+*.pem
+
+# Documentation build outputs
+docs/_build/
+
+# Misc
+.cache/
+.eslintcache
